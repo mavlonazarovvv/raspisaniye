@@ -280,7 +280,7 @@ const ADMIN="db30cdca9bcaccb7e2e8f2f6d2524782ca47bae9375d8ff292e92be6f7b97e9f";
 const DAYS=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"],ORDER=[1,2,3,4,5,6];
 const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const sha=async t=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,"0")).join("");
-let db=null,me=null,tab="sch",day=new Date().getDay()||1,L={},checked=false,map=null,D={users:[],les:[],hw:[],sc:[],cfg:[],arr:[],rooms:[],sea:[],ttt:[],dk:[],durak:[],quizzes:[],qlive:[],qstat:[],nt:[],loc:[]},edit=null,game="blast",inited=false;
+let db=null,me=null,tab="sch",day=new Date().getDay()||1,L={},checked=false,map=null,D={users:[],les:[],hw:[],sc:[],cfg:[],arr:[],rooms:[],sea:[],ttt:[],bil:[],bow:[],dk:[],durak:[],quizzes:[],qlive:[],qstat:[],nt:[],loc:[]},edit=null,game="blast",inited=false;
 try{me=JSON.parse(localStorage.getItem("sess")||"null")}catch(e){}
 const app=$("#app");
 function authView(msg=""){app.innerHTML=`<div class="auth"><div class="auth-l"><div class="brand">Расписание группы</div><ul class="auth-pts"><li>Расписание занятий</li><li>Домашние задания</li><li>Отметка прихода и игры</li></ul></div><div class="auth-r"><div class="auth-f"><h1>Вход</h1><p class="mu">Войдите или зарегистрируйтесь, чтобы смотреть расписание и задания.</p>
@@ -347,10 +347,10 @@ function adm(v){v.innerHTML=`<div class="card"><h3>Зарегистрирова�
 v.querySelectorAll("[data-cr]").forEach(b=>b.onclick=()=>db.doc("users/"+b.dataset.cr).update({cr:firebase.firestore.FieldValue.delete()}));
 v.querySelectorAll("[data-p]").forEach(b=>b.onclick=async()=>{const p=prompt("Новый пароль для @"+b.dataset.p+" (от 4 символов):");if(!p||p.length<4)return;await db.doc("users/"+b.dataset.p).update({h:await sha(b.dataset.p+"|"+p)});alert("Пароль изменён. Сообщи его ученику.")});v.querySelectorAll("[data-u]").forEach(b=>b.onclick=()=>{if(confirm("Удалить пользователя?"))db.doc("users/"+b.dataset.u).delete()})}
 /* ---------- games ---------- */
-let G={t:null,key:null};function stopGames(){clearInterval(G.t);G.t=null;document.onkeydown=null;document.body.classList.remove("dkfull")}
-const NAMES={blast:"Block Blast",2048:"2048",checkers:"Шашки",memory:"Память",click:"Кликер",ttt:"Крестики-нолики",sea:"Морской бой",durak:"Дурак",quiz:"Викторина"};
+let G={t:null,key:null};function stopGames(){cancelAnimationFrame(BIL.raf);cancelAnimationFrame(BOW.raf);BIL.cv=BOW.cv=null;clearInterval(G.t);G.t=null;document.onkeydown=null;document.body.classList.remove("dkfull")}
+const NAMES={blast:"Block Blast",2048:"2048",checkers:"Шашки",memory:"Память",click:"Кликер",ttt:"Крестики-нолики",sea:"Морской бой",durak:"Дурак",bil:"Бильярд",bow:"Боулинг",quiz:"Викторина"};
 function games(v){v.innerHTML=`<div class="gm"><div class="tabs">${Object.keys(NAMES).map(k=>`<button class="${k===game?"on":""}" data-g="${k}">${NAMES[k]}</button>`).join("")}</div><div class="card c"><div id="gs" class="mu"></div><div id="ga"></div></div><div class="card"><h3>Рекорды</h3><div class="lb" id="lb"></div></div></div>`;
-v.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{game=b.dataset.g;stopGames();games(v)});({2048:g2048,blast,checkers:ck,memory:mem,click:clk,ttt:tt,sea:seaV,durak:dkv,quiz:qz})[game]();lb()}
+v.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{game=b.dataset.g;stopGames();games(v)});({2048:g2048,blast,checkers:ck,memory:mem,click:clk,ttt:tt,sea:seaV,durak:dkv,bil,bow,quiz:qz})[game]();lb()}
 function lb(){const e=$("#lb");if(!e)return;const L=D.sc.filter(x=>x.game===game).sort((a,b)=>b.score-a.score).slice(0,10);
 e.innerHTML=L.map((x,i)=>`<div><span>${["🥇","🥈","🥉"][i]||i+1+"."} ${uav(x.login)} ${esc(unm(x))}</span><b>${x.score}</b></div>`).join("")||'<p class="mu">Рекордов пока нет — станьте первым!</p>'}
 async function save(score){const id=game+"_"+me.login,o=D.sc.find(x=>x.id===id);if(o&&o.score>=score)return;
@@ -500,7 +500,7 @@ async function joinR(coll,r,P,extra,bk){const rr=db.doc(coll+"/"+r.id),wl=wr(mk_
 const rsb=(c,rm)=>rm.b&&!rm.w?`<button class="d s" data-rs="${c}:${rm.id}">Сдаться</button>`:"";
 const gi=(c,r)=>{const k=c==="rooms",pa=k?r.white:r.a,pb=k?r.black:r.b;return{pa,pb,w:k?(r.status==="done"?(r.winner==="w"?"a":"b"):""):r.w}};
 async function settle(c,id){const rr=db.doc(c+"/"+id);try{await db.runTransaction(async t=>{const s=await t.get(rr);if(!s.exists)return;const r=s.data(),{pa,pb,w}=gi(c,r);if(r.paid||!r.stake||!w)return;const to=w==="draw"?[pa,pb]:[w==="a"?pa:pb],amt=w==="draw"?r.stake:r.stake*2,rf=to.map(p=>wr(p.k||p.login)),ss=await Promise.all(rf.map(x=>t.get(x)));ss.forEach((x,i)=>t.set(rf[i],{bal:gb(x)+amt},{merge:true}));t.update(rr,{paid:true})})}catch(e){}}
-function settleAll(k){if(k==="dk"&&me&&db){D.dk.forEach(r=>{if(r.st==="done"&&r.stake&&!r.paid&&r.ps.some(p=>p.login===me.login))dkSet(r.id)});return}if(!me||!db||!{rooms:1,sea:1,durak:1,ttt:1}[k])return;D[k].forEach(r=>{const{pa,pb,w}=gi(k,r);if(r.stake&&w&&!r.paid&&pb&&(pa.login===me.login||pb.login===me.login))settle(k,r.id)})}
+function settleAll(k){if(k==="dk"&&me&&db){D.dk.forEach(r=>{if(r.st==="done"&&r.stake&&!r.paid&&r.ps.some(p=>p.login===me.login))dkSet(r.id)});return}if(!me||!db||!{rooms:1,sea:1,durak:1,ttt:1,bil:1,bow:1}[k])return;D[k].forEach(r=>{const{pa,pb,w}=gi(k,r);if(r.stake&&w&&!r.paid&&pb&&(pa.login===me.login||pb.login===me.login))settle(k,r.id)})}
 async function delR(c,id){const r=D[c].find(x=>x.id===id);if(!r)return;const{pa,pb,w}=gi(c,r);if(pb&&!w&&r.stake&&!me.admin){alert("Идёт игра со ставкой. Доиграй или нажми «Сдаться» внутри игры");return}if(!confirm("Удалить комнату?"))return;if(w&&r.stake&&!r.paid)await settle(c,id);const rr=db.doc(c+"/"+id);await db.runTransaction(async t=>{const s=await t.get(rr);if(!s.exists)return;const d=s.data(),ps=d.stake&&!d.paid&&!w?[pa,pb].filter(Boolean):[],rf=ps.map(p=>wr(p.k||p.login)),ss=await Promise.all(rf.map(x=>t.get(x)));ss.forEach((x,i)=>t.set(rf[i],{bal:gb(x)+d.stake},{merge:true}));t.delete(rr)})}
 document.addEventListener("click",async e=>{const b=e.target.closest&&e.target.closest("[data-rs]");if(!b||!me)return;const[c,id]=b.dataset.rs.split(":"),r=D[c].find(x=>x.id===id);if(!r)return;const{pa,pb,w}=gi(c,r);if(w||!pb||(pa.login!==me.login&&pb.login!==me.login))return;if(!confirm("Сдаться? Ставка уйдёт сопернику"))return;const opp=pa.login===me.login?"b":"a";await db.doc(c+"/"+id).update(c==="rooms"?{status:"done",winner:opp==="a"?"w":"b"}:{w:opp,lm:"Сдался · "+me.name})});
 function walV(v){if(!v.isConnected||tab!=="prof")return;const o=D.users.filter(u=>u.login!==me.login).map(u=>`<option value="${esc(u.login)}">${esc(u.name)} (@${esc(u.login)})</option>`).join("")+(me.admin?"":'<option value="__admin">👑 Админ</option>');
@@ -555,8 +555,125 @@ status(rm.w?(rm.w==="draw"?"🤝 Ничья":"🏆 Победил "+esc(rm[rm.w]
 A.innerHTML=`<div class="mu">❌ ${esc(rm.a.name)} vs ⭕ ${esc(rm.b.name)} · банк ${(rm.stake||0)*2}$</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(100%,300px);margin:10px auto">${[...rm.cells].map((c,i)=>`<button class="${c==="."?"g":""}" data-i="${i}" style="aspect-ratio:1;font-size:2.4rem;padding:0">${c==="x"?"❌":c==="o"?"⭕":""}</button>`).join("")}</div>`+back;bk();
 A.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(!my||rm.cells[i]!==".")return;const ch=side==="a"?"x":"o",c=rm.cells.slice(0,i)+ch+rm.cells.slice(i+1),win=WL.some(l=>l.every(k=>c[k]===ch));db.doc("ttt/"+rm.id).update({cells:c,turn:side==="a"?"b":"a",w:win?side:c.includes(".")?"":"draw"});if(win)save(best()+1)})}
 
+/* ---------- billiards & bowling ---------- */
+let BIL={id:null,cv:null,rid:null,raf:0,upd:null},BOW={id:null,cv:null,rid:null,raf:0,upd:null,ps:null};
+const gSide=rm=>rm.a.login===me.login?"a":rm.b&&rm.b.login===me.login?"b":null,
+gWin=r=>r.w==="draw"?"🤝 Ничья":"🏆 Победил "+esc(r[r.w].name);
+function gRoom(S,coll,ttl,mk,redraw,build){const A=$("#ga");if(!A)return;const rm=D[coll].find(r=>r.id===S.id);
+ const off=()=>{S.cv=null;cancelAnimationFrame(S.raf)};
+ if(!rm){S.id=null;off();return rlob(A,coll,id=>S.id=id,mk,redraw,ttl,()=>({}))}
+ const back=`<button class="g" id="bk" style="margin:8px">← К списку</button><span id="rsb"></span>`,bk=()=>{$("#bk").onclick=()=>{S.id=null;off();redraw()}};
+ if(!rm.b){status("Ждём соперника…");off();A.innerHTML="<p>Ждём соперника… ставка "+(rm.stake||0)+"$</p>"+back;return bk()}
+ if(!(S.cv&&S.cv.isConnected&&S.rid===rm.id)){cancelAnimationFrame(S.raf);build(A,rm,back);bk();S.rid=rm.id}
+ S.upd(rm);const r=$("#rsb");if(r)r.innerHTML=rsb(coll,rm)}
+const bilRack=()=>{const o=[1,8,2,9,15,3,10,4,11,5,12,6,13,7,14],b=[[90,100]];let k=0;for(let c=0;c<5;c++)for(let r=0;r<=c;r++)b[o[k++]]=[215+c*11,+(100+(r-c/2)*12.6).toFixed(1)];return b.flat()};
+function bil(){gRoom(BIL,"bil","🎱 Бильярд онлайн",()=>({bl:bilRack(),turn:"a",sh:null,sn:0}),bil,bilBuild)}
+function bilBuild(A,rm,back){const S=BIL;let R=rm,m=gSide(rm),B=[],anim=false,shooting=false,seen=rm.sh?rm.sh.n:0,aim=null,pt=[],lt=0,acc=0,svd=false;
+ const W=340,H=200,X0=22,X1=318,Y0=22,Y1=178,BR=6,PR=11,PK=[[X0,Y0],[170,Y0-3],[X1,Y0],[X0,Y1],[170,Y1+3],[X1,Y1]],own=(i,s)=>s==="a"?i>=1&&i<=7:i>=8&&i<=14;
+ A.innerHTML=`<div id="hud" class="mu"></div><canvas id="bc" width="${W}" height="${H}" style="width:min(100%,640px);height:auto;display:block;margin:8px auto;touch-action:none;border-radius:10px"></canvas><p class="mu" style="margin:0">Тяни назад от белого шара и отпускай. Свои шары: 🔴 1–7 у создателя, 🟡 8–14 у гостя, затем чёрный.</p>${back}`;
+ const cv=$("#bc"),cx=cv.getContext("2d");S.cv=cv;
+ const ld=f=>{B=[];for(let i=0;i<16;i++)B.push({x:f[i*2],y:f[i*2+1],vx:0,vy:0,on:f[i*2]>=0})},sv=()=>B.flatMap(b=>b.on?[Math.round(b.x*10)/10,Math.round(b.y*10)/10]:[-1,-1]);
+ ld(rm.bl);
+ const respot=()=>{const c=B[0];c.on=true;c.vx=c.vy=0;c.x=90;c.y=100;for(let t=0;t<12&&B.some((b,i)=>i&&b.on&&Math.hypot(b.x-c.x,b.y-c.y)<2*BR+1);t++)c.x-=8;c.x=Math.max(X0+BR,c.x)};
+ function step(d){let mv=false;
+  for(let i=0;i<16;i++){const b=B[i];if(!b.on)continue;b.x+=b.vx*d;b.y+=b.vy*d;const v=Math.hypot(b.vx,b.vy);
+   if(v>0){const n=Math.max(0,v-130*d)*Math.exp(-.35*d);if(n<5)b.vx=b.vy=0;else{b.vx*=n/v;b.vy*=n/v;mv=true}}
+   if(PK.some(p=>Math.hypot(b.x-p[0],b.y-p[1])<PR)){b.on=false;b.vx=b.vy=0;pt.push(i);continue}
+   if(b.x<X0+BR){b.x=X0+BR;b.vx=Math.abs(b.vx)*.8}if(b.x>X1-BR){b.x=X1-BR;b.vx=-Math.abs(b.vx)*.8}
+   if(b.y<Y0+BR){b.y=Y0+BR;b.vy=Math.abs(b.vy)*.8}if(b.y>Y1-BR){b.y=Y1-BR;b.vy=-Math.abs(b.vy)*.8}}
+  for(let i=0;i<16;i++)for(let j=i+1;j<16;j++){const a=B[i],c=B[j];if(!a.on||!c.on)continue;const dx=c.x-a.x,dy=c.y-a.y,q=Math.hypot(dx,dy);if(q>=2*BR||q===0)continue;
+   const nx=dx/q,ny=dy/q,o=(2*BR-q)/2;a.x-=nx*o;a.y-=ny*o;c.x+=nx*o;c.y+=ny*o;const rv=(a.vx-c.vx)*nx+(a.vy-c.vy)*ny;
+   if(rv>0){const J=rv*.97;a.vx-=J*nx;a.vy-=J*ny;c.vx+=J*nx;c.vy+=J*ny;mv=true}}
+  return mv}
+ function fin(){B.forEach(b=>{b.vx=b.vy=0});if(!shooting){if((R.sn||0)>=seen)ld(R.bl);return}
+  shooting=false;const o=m==="a"?"b":"a",left=B.filter((b,i)=>own(i,m)&&b.on).length+pt.filter(i=>own(i,m)).length;let win="",turn=m;
+  if(pt.includes(15))win=(left===0&&!pt.includes(0))?m:o;
+  else if(pt.includes(0)){respot();turn=o}
+  else if(!pt.some(i=>own(i,m)))turn=o;
+  db.doc("bil/"+R.id).update({bl:sv(),turn,sn:seen,w:win})}
+ function loop(ts){const dt=Math.min(.05,(ts-lt)/1000||0);lt=ts;
+  if(anim){acc+=dt;let mv=true;while(acc>=1/240){acc-=1/240;mv=step(1/240);if(!mv)break}if(!mv){acc=0;anim=false;fin()}}
+  draw();S.raf=requestAnimationFrame(loop)}
+ function draw(){const g=cx;g.fillStyle="#5b3a1e";g.fillRect(0,0,W,H);g.fillStyle="#0f7b4f";g.fillRect(14,14,W-28,H-28);
+  g.fillStyle="#071a12";PK.forEach(p=>{g.beginPath();g.arc(p[0],p[1],PR-1,0,7);g.fill()});
+  B.forEach((b,i)=>{if(!b.on)return;g.fillStyle=i?i===15?"#111":i<8?"#ff5d73":"#ffd166":"#fff";g.beginPath();g.arc(b.x,b.y,BR,0,7);g.fill();g.fillStyle="#fff9";g.beginPath();g.arc(b.x-2,b.y-2,1.6,0,7);g.fill()});
+  if(aim&&!anim){const c=B[0],dx=c.x-aim[0],dy=c.y-aim[1],l=Math.hypot(dx,dy);if(l>=10){const ux=dx/l,uy=dy/l;let x=c.x,y=c.y;
+   for(let t=0;t<500;t+=2){x+=ux*2;y+=uy*2;if(x<X0+BR||x>X1-BR||y<Y0+BR||y>Y1-BR)break;if(B.some((b,i)=>i&&b.on&&Math.hypot(b.x-x,b.y-y)<2*BR))break}
+   g.strokeStyle="#fffa";g.lineWidth=1;g.setLineDash([4,4]);g.beginPath();g.moveTo(c.x,c.y);g.lineTo(x,y);g.stroke();g.setLineDash([]);g.beginPath();g.arc(x,y,BR,0,7);g.stroke();
+   const k=8+Math.min(l,110)*.6;g.strokeStyle="#e8c07a";g.lineWidth=3;g.beginPath();g.moveTo(c.x-ux*8,c.y-uy*8);g.lineTo(c.x-ux*k,c.y-uy*k);g.stroke();g.lineWidth=1}}}
+ function shoot(a,p){const n=(R.sh?R.sh.n:0)+1;pt=[];shooting=true;anim=true;acc=0;seen=n;const c=B[0];c.vx=Math.cos(a)*p;c.vy=Math.sin(a)*p;db.doc("bil/"+R.id).update({sh:{n,a:+a.toFixed(3),p,by:m}})}
+ const can=()=>m&&!anim&&!R.w&&R.turn===m;
+ const pos=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]};
+ cv.onpointerdown=e=>{if(!can())return;try{cv.setPointerCapture(e.pointerId)}catch(x){}aim=pos(e)};
+ cv.onpointermove=e=>{if(aim)aim=pos(e)};cv.onpointercancel=()=>aim=null;
+ cv.onpointerup=()=>{if(!aim)return;const[px,py]=aim;aim=null;if(!can())return;const c=B[0],dx=c.x-px,dy=c.y-py,l=Math.hypot(dx,dy);if(l<10)return;shoot(Math.atan2(dy,dx),Math.round(Math.min(l,110)/110*440))};
+ const hud=()=>{const c=g=>{let n=0;for(let i=g?8:1;i<(g?15:8);i++)if(R.bl[i*2]>=0)n++;return n};
+  $("#hud").innerHTML=`🔴 ${esc(R.a.name)}: ${c(0)} · 🟡 ${esc(R.b.name)}: ${c(1)} · банк ${(R.stake||0)*2}$`;
+  status(R.w?gWin(R):m?(R.turn===m?"Твой ход ("+(m==="a"?"🔴":"🟡")+")":"Ход соперника…"):"Наблюдение")};
+ S.upd=r=>{R=r;m=gSide(r);
+  if(R.sh&&R.sh.n>seen&&R.sh.by!==m){seen=R.sh.n;ld(R.bl);pt=[];acc=0;const c=B[0];c.vx=Math.cos(R.sh.a)*R.sh.p;c.vy=Math.sin(R.sh.a)*R.sh.p;anim=true}
+  else if(!anim&&!shooting&&(R.sn||0)>=seen)ld(R.bl);
+  hud();if(R.w&&R.w===m&&!svd){svd=true;save(best()+1)}};
+ S.raf=requestAnimationFrame(loop)}
+function bview(R){let up=10,f=0,r=0,bn=0,dn=false,fs=[];
+ R.forEach(n=>{if(dn)return;fs[f]=(fs[f]||"")+(n===up?(up===10?"X":"/"):(n||"-"));up-=n;
+  if(f<9){if(r===0&&n===10){f++;up=10}else if(r===0)r=1;else{f++;r=0;up=10}}
+  else if(r===0){r=1;bn=n===10;if(!up)up=10}
+  else if(r===1){if(bn||!up){r=2;if(!up)up=10}else dn=true}
+  else dn=true});
+ const fr=[];let t=0,i=0;for(let k=0;k<10;k++){const a=R[i];if(a==null)break;if(a===10){if(R[i+2]==null)break;t+=10+R[i+1]+R[i+2];i++}else{const b=R[i+1];if(b==null)break;if(a+b===10){if(R[i+2]==null)break;t+=10+R[i+2]}else t+=a+b;i+=2}fr.push(t)}
+ return{up,f,r,done:dn,fs,fr,t:fr.length?fr[fr.length-1]:0}}
+function bow(){gRoom(BOW,"bow","🎳 Боулинг онлайн",()=>({ra:[],rb:[],fa:false,fb:false}),bow,bowBuild)}
+function bowBuild(A,rm,back){const S=BOW;let R=rm,m=gSide(rm),anim=false,aim=null,bx=100,bl=null,lt=0,acc=0,t0=0,svd=false;
+ const W=200,H=320,L0=28,L1=172,BR=7,PD=4.5,BY=290,P=[];
+ if(S.rid!==rm.id||!S.ps)S.ps=Array(10).fill(true);const ps=S.ps;let rolls=m?(rm["r"+m]||[]).slice():[];
+ for(let k=0;k<4;k++)for(let j=0;j<=k;j++){const x=100+(j-k/2)*18,y=82-k*15;P.push({x,y,x0:x,y0:y,vx:0,vy:0})}
+ A.innerHTML=`<div class="mu">🎳 10 фреймов · банк ${(rm.stake||0)*2}$</div><div id="bd"></div><canvas id="bc" width="${W}" height="${H}" style="width:min(100%,300px);height:auto;display:block;margin:8px auto;touch-action:none;border-radius:10px"></canvas><input id="px" type="range" min="${L0+BR+2}" max="${L1-BR-2}" value="100" style="max-width:300px;padding:0;border:0;background:none"><p class="mu" style="margin:4px 0">Двигай шар ползунком, потом потяни вниз по полю и отпусти. Чем длиннее движение, тем сильнее бросок.</p>${back}`;
+ const cv=$("#bc"),cx=cv.getContext("2d");S.cv=cv;
+ const home=()=>P.forEach(p=>{p.x=p.x0;p.y=p.y0;p.vx=p.vy=0});
+ function step(d){let mv=false;
+  if(bl){if(!bl.g)bl.vx+=bl.ax*d;bl.x+=bl.vx*d;bl.y+=bl.vy*d;if(!bl.g&&(bl.x<L0||bl.x>L1)){bl.g=1;bl.x=bl.x<L0?21:179;bl.vx=0}
+   if(bl.y<12)bl=null;else{mv=true;if(!bl.g)P.forEach((p,i)=>{if(!ps[i])return;const dx=p.x-bl.x,dy=p.y-bl.y,q=Math.hypot(dx,dy),s=BR+PD;if(q>=s||q===0)return;const nx=dx/q,ny=dy/q;p.x+=nx*(s-q);p.y+=ny*(s-q);
+    const rv=(bl.vx-p.vx)*nx+(bl.vy-p.vy)*ny;if(rv>0){const J=1.7*rv*(6/7);bl.vx-=J/6*nx;bl.vy-=J/6*ny;p.vx+=J*nx;p.vy+=J*ny}})}}
+  P.forEach((p,i)=>{if(!ps[i])return;p.x+=p.vx*d;p.y+=p.vy*d;const v=Math.hypot(p.vx,p.vy);if(v>0){const n=v*Math.exp(-2.4*d);if(n<4)p.vx=p.vy=0;else{p.vx*=n/v;p.vy*=n/v;mv=true}}
+   if(p.y<16){p.y=16;p.vy=Math.abs(p.vy)*.3}if(p.x<8){p.x=8;p.vx=Math.abs(p.vx)*.3}if(p.x>192){p.x=192;p.vx=-Math.abs(p.vx)*.3}});
+  for(let i=0;i<10;i++)for(let j=i+1;j<10;j++){if(!ps[i]||!ps[j])continue;const a=P[i],c=P[j],dx=c.x-a.x,dy=c.y-a.y,q=Math.hypot(dx,dy);if(q>=2*PD||q===0)continue;
+   const nx=dx/q,ny=dy/q,o=(2*PD-q)/2;a.x-=nx*o;a.y-=ny*o;c.x+=nx*o;c.y+=ny*o;const rv=(a.vx-c.vx)*nx+(a.vy-c.vy)*ny;if(rv>0){const J=rv*.85;a.vx-=J*nx;a.vy-=J*ny;c.vx+=J*nx;c.vy+=J*ny;mv=true}}
+  return mv}
+ function endRoll(){anim=false;bl=null;let n=0;P.forEach((p,i)=>{if(ps[i]&&(Math.hypot(p.x-p.x0,p.y-p.y0)>6||p.x<L0||p.x>L1)){ps[i]=false;n++}});
+  rolls.push(n);const V=bview(rolls);if(V.up===10)ps.fill(true);home();
+  db.doc("bow/"+R.id).update({["r"+m]:rolls,["f"+m]:V.done});bd()}
+ function loop(ts){const dt=Math.min(.05,(ts-lt)/1000||0);lt=ts;
+  if(anim){acc+=dt;t0+=dt;let mv=true;while(acc>=1/240){acc-=1/240;mv=step(1/240);if(!mv)break}if(!mv||t0>7){acc=0;endRoll()}}
+  draw();S.raf=requestAnimationFrame(loop)}
+ function draw(){const g=cx;g.fillStyle="#1b1f33";g.fillRect(0,0,W,H);g.fillStyle="#07080f";g.fillRect(14,0,14,H);g.fillRect(172,0,14,H);
+  const lg=g.createLinearGradient(L0,0,L1,0);lg.addColorStop(0,"#d9a45f");lg.addColorStop(.5,"#f0c284");lg.addColorStop(1,"#d9a45f");g.fillStyle=lg;g.fillRect(L0,0,L1-L0,H);
+  g.strokeStyle="#0002";g.lineWidth=1;for(let x=L0+18;x<L1;x+=18){g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke()}
+  g.fillStyle="#07080f";g.fillRect(L0,0,L1-L0,13);
+  P.forEach((p,i)=>{if(!ps[i])return;g.globalAlpha=Math.hypot(p.x-p.x0,p.y-p.y0)>6?.4:1;g.fillStyle="#fff";g.beginPath();g.arc(p.x,p.y,PD,0,7);g.fill();g.fillStyle="#e5484d";g.beginPath();g.arc(p.x,p.y,PD*.45,0,7);g.fill()});g.globalAlpha=1;
+  const b=anim?bl:{x:bx,y:BY};if(b){const rg=g.createRadialGradient(b.x-2,b.y-2,1,b.x,b.y,BR);rg.addColorStop(0,"#8fa5ff");rg.addColorStop(1,"#1d2a8a");g.fillStyle=rg;g.beginPath();g.arc(b.x,b.y,BR,0,7);g.fill()}
+  if(aim&&!anim){const dx=aim.x0-aim.x,dy=aim.y-aim.y0;if(dy>6){const a=Math.max(-.3,Math.min(.3,Math.atan2(dx,dy))),pw=Math.min(1,Math.hypot(dx,dy)/80);
+   g.strokeStyle="#fff";g.setLineDash([5,5]);g.beginPath();g.moveTo(bx,BY);g.lineTo(bx+Math.sin(a)*200,BY-Math.cos(a)*200);g.stroke();g.setLineDash([]);
+   g.fillStyle="#0008";g.fillRect(34,H-16,132,8);g.fillStyle=pw>.85?"#ff5d73":"#2ee59d";g.fillRect(34,H-16,132*pw,8)}}}
+ function roll(a,v){anim=true;acc=0;t0=0;home();bl={x:bx,y:BY,vx:Math.sin(a)*v,vy:-Math.cos(a)*v,g:0,ax:(Math.random()-.5)*110}}
+ const cell=(nm,Q)=>{const v=bview(Q||[]);return`<div style="margin:4px 0;text-align:left"><div class="mu" style="font-size:.78rem">${esc(nm)} · ${v.t} очков</div><div style="display:grid;grid-template-columns:repeat(10,1fr);gap:2px">${[...Array(10).keys()].map(i=>`<div style="background:var(--sub);border:1px solid var(--bd);border-radius:4px;text-align:center;padding:1px 0;line-height:1.15"><div class="mu" style="font-size:.62rem;min-height:.8rem">${v.fs[i]||""}</div><b style="font-size:.75rem">${v.fr[i]!=null?v.fr[i]:"·"}</b></div>`).join("")}</div></div>`};
+ const done=()=>bview(rolls).done;
+ function bd(){const V=bview(rolls),o=m==="a"?"b":"a";
+  $("#bd").innerHTML=m?cell(R[m].name+" (ты)",rolls)+cell(R[o].name,R["r"+o]):cell(R.a.name,R.ra)+cell(R.b.name,R.rb);
+  const sl=$("#px");if(sl)sl.disabled=!m||anim||V.done||!!R.w;
+  status(R.w?gWin(R):!m?"Наблюдение":V.done?"Готово! Ждём соперника…":"Фрейм "+(V.f+1)+"/10 · бросок "+(V.r+1))}
+ $("#px").oninput=e=>{if(!anim)bx=+e.target.value};
+ const pos=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]};
+ cv.onpointerdown=e=>{if(!m||anim||R.w||done())return;try{cv.setPointerCapture(e.pointerId)}catch(x){}const[x,y]=pos(e);aim={x0:x,y0:y,x,y}};
+ cv.onpointermove=e=>{if(aim){const[x,y]=pos(e);aim.x=x;aim.y=y}};cv.onpointercancel=()=>aim=null;
+ cv.onpointerup=()=>{if(!aim)return;const a=aim;aim=null;const dx=a.x0-a.x,dy=a.y-a.y0;if(dy<=6||anim||!m||R.w||done())return;roll(Math.max(-.3,Math.min(.3,Math.atan2(dx,dy))),150+Math.min(1,Math.hypot(dx,dy)/80)*230);bd()};
+ S.upd=r=>{R=r;m=gSide(r);
+  if(m&&R.fa&&R.fb&&!R.w){const a=bview(R.ra).t,b=bview(R.rb).t;db.doc("bow/"+R.id).update({w:a===b?"draw":a>b?"a":"b"})}
+  bd();if(R.w&&R.w===m&&!svd){svd=true;save(best()+1)}};
+ S.raf=requestAnimationFrame(loop)}
+
 const SK=l=>l.replace(/\./g,"_"),FVv=()=>firebase.firestore.FieldValue;
-function liveUpd(k){if(k==="qlive")qauto();if(tab!=="games")return;const g={sea:"sea",ttt:"ttt",dk:"durak",durak:"durak"}[k]||"quiz";if(game!==g)return;if(g==="quiz"&&QV==="build")return;({sea:seaV,ttt:tt,durak:dkv,quiz:qz})[g]()}
+function liveUpd(k){if(k==="qlive")qauto();if(tab!=="games")return;const g={sea:"sea",ttt:"ttt",dk:"durak",durak:"durak",bil:"bil",bow:"bow"}[k]||"quiz";if(game!==g)return;if(g==="quiz"&&QV==="build")return;({sea:seaV,ttt:tt,durak:dkv,bil,bow,quiz:qz})[g]()}
 function rlob(A,coll,setId,mk,redraw,ttl,join){const R=D[coll].filter(r=>Date.now()-r.ts<432e5&&(r.a.login===me.login||(r.b&&r.b.login===me.login)||(!r.b&&!r.w))).sort((a,b)=>b.ts-a.ts);status(ttl);
 A.innerHTML=`${stkIn()}<button id="nr">➕ Создать комнату</button><p class="mu">Создай комнату, друг нажмёт «Играть». Победы идут в рекорды.</p>${R.map(r=>{const m=r.a.login===me.login||(r.b&&r.b.login===me.login);return`<div class="les" style="grid-template-columns:1fr auto;text-align:left"><div><b>${esc(r.a.name)}</b> vs <b>${r.b?esc(r.b.name):"…"}</b> ${r.stake?"💰"+r.stake+"$":""}<div class="mu">${r.w?"завершена":r.b?"идёт игра":"ждёт соперника"}</div></div><div><button class="s" data-j="${r.id}">${m?"Открыть":"Играть"}</button>${r.a.login===me.login||me.admin?` <button class="d s" data-x="${r.id}">🗑</button>`:""}</div></div>`}).join("")||'<p class="mu">Комнат пока нет</p>'}`;
 $("#nr").onclick=async()=>{const id="r"+Date.now();const s=stk();if(s==null)return;try{await mv$(mk_(),-s)}catch(e){alert(e.message);return}await db.doc(coll+"/"+id).set({a:{login:me.login,name:me.name,k:mk_()},b:null,w:"",lm:"",ts:Date.now(),stake:s,...mk()});setId(id);redraw()};
@@ -729,12 +846,12 @@ const sub=(p,k)=>db.collection(p).onSnapshot(s=>{D[k]=s.docs.map(d=>({id:d.id,..
 if(k==="users"&&me&&!me.admin&&inited&&!D.users.some(u=>u.login===me.login)){out();return}
 if(k==="users")inited=true;
 if(k==="users"&&me){crCheck();crv();loanV()}
-if(!me)return;if(k==="nt"){ntv();return}if(k==="loc"){liveUpd();return}if(k==="arr"){if(tab==="zone")zl();checkIn();return}if(["sea","ttt","dk","durak","quizzes","qlive","qstat"].includes(k)){liveUpd(k);return}if(k==="rooms"){if(tab==="games"&&game==="checkers")ck();return}if(k==="cfg"){if(!annEdit)annv();checkIn();return}const f=document.activeElement;
+if(!me)return;if(k==="nt"){ntv();return}if(k==="loc"){liveUpd();return}if(k==="arr"){if(tab==="zone")zl();checkIn();return}if(["sea","ttt","dk","durak","bil","bow","quizzes","qlive","qstat"].includes(k)){liveUpd(k);return}if(k==="rooms"){if(tab==="games"&&game==="checkers")ck();return}if(k==="cfg"){if(!annEdit)annv();checkIn();return}const f=document.activeElement;
 if(k==="sc"&&tab==="games")lb();
 else if(k==="hw"&&tab==="hw"&&f&&/INPUT|TEXTAREA/.test(f.tagName))return;
 else if(k==="les"&&tab==="sch"&&f&&/INPUT/.test(f.tagName))return;
 else if(k==="users"&&tab!=="adm")return;
 else if(k!=="sc"&&tab!=="games")view()});
-sub("users","users");sub("notes","nt");sub("loc","loc");sub("lessons","les");sub("hw","hw");sub("scores","sc");sub("config","cfg");sub("arrivals","arr");sub("rooms","rooms");["sea","ttt","dk","durak","quizzes","qlive","qstat"].forEach(x=>sub(x,x));
+sub("users","users");sub("notes","nt");sub("loc","loc");sub("lessons","les");sub("hw","hw");sub("scores","sc");sub("config","cfg");sub("arrivals","arr");sub("rooms","rooms");["sea","ttt","dk","durak","bil","bow","quizzes","qlive","qstat"].forEach(x=>sub(x,x));
 if(me)render()}catch(e){console.error(e)}})();
 </script></body></html>
